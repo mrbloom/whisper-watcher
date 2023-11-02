@@ -89,5 +89,5 @@ while True:
             if os.path.exists(f"{srt_file}.dummy"):
                 logging.warning(f"Dummy file {srt_file}.dummy already exists for: {file}. Check video file.")  # Log warning instead of print
 
-    logging.info("Done!")  # Log instead of print
+    print("Done!")  # Log instead of print
     time.sleep(10)
