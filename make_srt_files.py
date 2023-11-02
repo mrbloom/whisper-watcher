@@ -6,6 +6,7 @@ import sys
 import time
 import logging  # Import the logging module
 
+
 # 1. Logging configuration
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -19,6 +20,10 @@ def get_input(prompt, default_value):
 
 dir_path = sys.argv[1] if len(sys.argv) > 1 else get_input("Set directory for files", ".")
 mask = sys.argv[2] if len(sys.argv) > 2 else get_input("Set mask for files", "**/*.ts")
+delete_files = sys.argv[3] if len(sys.argv) > 3 else get_input("Delete after transcribing files (y/Yes, n/No) ?", "n/No")
+delete_files = delete_files.strip()[0].upper()
+delete_files = delete_files if delete_files in ["N", "Y"] else "N"
+
 
 def get_file_size(filepath):
     with open(filepath, "r") as file:
@@ -65,7 +70,8 @@ while True:
                         time.sleep(2)
 
                     os.remove(f"{srt_file}.dummy")
-                    os.remove(file)
+                    if delete_files == "Y":
+                        os.remove(file)
                 except:
                     logging.error(f"Some problems with {file}")  # Log error instead of print
             else:
