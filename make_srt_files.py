@@ -42,40 +42,52 @@ def is_file_ready(filepath):
     except OSError:
         return False
 
+def command_line(cmd):
+    start_time = time.time()
+    subprocess.run(cmd, shell=True)
+    end_time = time.time()
+
+    duration = end_time - start_time
+    duration_td = datetime.timedelta(seconds=duration)
+    dt = datetime.datetime(1, 1, 1) + duration_td
+
+    formatted_time = dt.strftime("%H:%M:%S")
+    logging.info(f"Subtitles for {file} created in {formatted_time}.")  # Log instead of print
+
+
 while True:
     search_dir = os.path.join(dir_path, mask)
     for file in glob(search_dir, recursive=True):
-        if is_file_ready(file):
-            srt_file = os.path.join(os.path.splitext(file)[0] + '.srt')
-            if not os.path.exists(srt_file) and not os.path.exists(f"{srt_file}.dummy"):
-                logging.info(f"Processing: {file}")  # Log instead of print
 
-                with open(f"{srt_file}.dummy", 'w') as dummy:
-                    dummy.write("PROCESSING...")
+        srt_file = os.path.join(os.path.splitext(file)[0] + '.srt')
+        if not os.path.exists(srt_file) and not os.path.exists(f"{srt_file}.dummy"):
 
-                try:
-                    cmd = f'whisper --model large-v2 "{file}" --output_dir "{dir_path}"'
-                    start_time = time.time()
-                    subprocess.run(cmd, shell=True)
-                    end_time = time.time()
+            logging.info(f"Processing: {file}")  # Log instead of print
 
-                    duration = end_time - start_time
-                    duration_td = datetime.timedelta(seconds=duration)
-                    dt = datetime.datetime(1, 1, 1) + duration_td
+            with open(f"{srt_file}.dummy", 'w') as dummy:
+                dummy.write("PROCESSING...")
 
-                    formatted_time = dt.strftime("%H:%M:%S")
-                    logging.info(f"Subtitles for {file} created in {formatted_time}.")  # Log instead of print
+            try:
+                # Checking of end of uploading file on disk
+                while not is_file_ready(file):
+                    pass
 
-                    while not os.path.exists(srt_file):
-                        time.sleep(2)
+                cmd = f'whisper --model large-v2 "{file}" --output_dir "{dir_path}"'
+                command_line(cmd)
+                # waiting the appearing of subtitles
+                while not os.path.exists(srt_file):
+                    time.sleep(10)
 
-                    os.remove(f"{srt_file}.dummy")
-                    if delete_files == "Y":
-                        os.remove(file)
-                except:
-                    logging.error(f"Some problems with {file}")  # Log error instead of print
-            else:
-                logging.warning(f"SRT file already exists for: {file} or dummy file. Check video file.")  # Log warning instead of print
+                os.remove(f"{srt_file}.dummy")
+                if delete_files == "Y":
+                    os.remove(file)
+            except:
+                logging.error(f"Some problems with {file}")  # Log error instead of print
+        else:
+            if os.path.exists(srt_file):
+                logging.warning(f"SRT file already exists for: {file}.")
+            if os.path.exists(f"{srt_file}.dummy"):
+                logging.warning(f"Dummy file {srt_file}.dummy already exists for: {file}. Check video file.")  # Log warning instead of print
 
     logging.info("Done!")  # Log instead of print
     time.sleep(10)
