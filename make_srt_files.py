@@ -19,7 +19,11 @@ def get_input(prompt, default_value):
     return value or default_value
 
 dir_path = sys.argv[1] if len(sys.argv) > 1 else get_input("Set directory for files", ".")
-mask = sys.argv[2] if len(sys.argv) > 2 else get_input("Set mask for files", "**/*.ts")
+extensions = sys.argv[2] if len(sys.argv) > 2 else get_input("Set file extensions (comma separated)", "ts,mp4,mkv,mxf")
+# Split the extensions string into a list of individual extensions
+extensions = extensions.split(',')
+
+# mask = sys.argv[2] if len(sys.argv) > 2 else get_input("Set mask for files", "**/*.ts")
 delete_files = sys.argv[3] if len(sys.argv) > 3 else get_input("Delete after transcribing files (y/Yes, n/No) ?", "n/No")
 delete_files = delete_files.strip()[0].upper()
 delete_files = delete_files if delete_files in ["N", "Y"] else "N"
@@ -56,38 +60,39 @@ def command_line(cmd):
 
 
 while True:
-    search_dir = os.path.join(dir_path, mask)
-    for file in glob(search_dir, recursive=True):
+    for extension in extensions:  # Loop over each extension
+        search_dir = os.path.join(dir_path, f"**/*.{extension}")
+        for file in glob(search_dir, recursive=True):
 
-        srt_file = os.path.join(os.path.splitext(file)[0] + '.srt')
-        if not os.path.exists(srt_file) and not os.path.exists(f"{srt_file}.dummy"):
+            srt_file = os.path.join(os.path.splitext(file)[0] + '.srt')
+            if not os.path.exists(srt_file) and not os.path.exists(f"{srt_file}.dummy"):
 
-            logging.info(f"Processing: {file}")  # Log instead of print
+                logging.info(f"Processing: {file}")  # Log instead of print
 
-            with open(f"{srt_file}.dummy", 'w') as dummy:
-                dummy.write("PROCESSING...")
+                with open(f"{srt_file}.dummy", 'w') as dummy:
+                    dummy.write("PROCESSING...")
 
-            try:
-                # Checking of end of uploading file on disk
-                while not is_file_ready(file):
-                    pass
+                try:
+                    # Checking of end of uploading file on disk
+                    while not is_file_ready(file):
+                        pass
 
-                cmd = f'whisper --model large-v2 "{file}" --output_dir "{dir_path}"'
-                command_line(cmd)
-                # waiting the appearing of subtitles
-                while not os.path.exists(srt_file):
-                    time.sleep(10)
+                    cmd = f'whisper --model large-v2 "{file}" --output_dir "{os.path.dirname(file)}"'
+                    command_line(cmd)
+                    # waiting the appearing of subtitles
+                    while not os.path.exists(srt_file):
+                        time.sleep(10)
 
-                os.remove(f"{srt_file}.dummy")
-                if delete_files == "Y":
-                    os.remove(file)
-            except:
-                logging.error(f"Some problems with {file}")  # Log error instead of print
-        else:
-            if os.path.exists(srt_file):
-                logging.warning(f"SRT file already exists for: {file}.")
-            if os.path.exists(f"{srt_file}.dummy"):
-                logging.warning(f"Dummy file {srt_file}.dummy already exists for: {file}. Check video file.")  # Log warning instead of print
+                    os.remove(f"{srt_file}.dummy")
+                    if delete_files == "Y":
+                        os.remove(file)
+                except:
+                    logging.error(f"Some problems with {file}")  # Log error instead of print
+            else:
+                if os.path.exists(srt_file):
+                    logging.warning(f"SRT file already exists for: {file}.")
+                if os.path.exists(f"{srt_file}.dummy"):
+                    logging.warning(f"Dummy file {srt_file}.dummy already exists for: {file}. Check video file.")  # Log warning instead of print
 
     print("Done!")  # Log instead of print
     time.sleep(10)
