@@ -28,6 +28,12 @@ delete_files = sys.argv[3] if len(sys.argv) > 3 else get_input("Delete after tra
 delete_files = delete_files.strip()[0].upper()
 delete_files = delete_files if delete_files in ["N", "Y"] else "N"
 
+language = sys.argv[4] if len(sys.argv) > 4 else get_input("Set language for transcribing files (default: Russian) for auto detect enter 'auto' ?", "Russian")
+if language.strip().upper()[:4] == "AUTO":
+    language = "AUTO"
+else:
+    language = language.title()
+
 
 def get_file_size(filepath):
     with open(filepath, "r") as file:
@@ -77,7 +83,10 @@ while True:
                     while not is_file_ready(file):
                         pass
 
-                    cmd = f'whisper --model large-v2 "{file}" --output_dir "{os.path.dirname(file)}"'
+                    if language == "AUTO":
+                        cmd = f'whisper --model large-v2 "{file}" --output_dir "{os.path.dirname(file)}"'
+                    else:
+                        cmd = f'whisper --model large-v2 "{file}" --output_dir "{os.path.dirname(file)}" --language {language}'
                     command_line(cmd)
                     # waiting the appearing of subtitles
                     while not os.path.exists(srt_file):
@@ -94,5 +103,5 @@ while True:
                 if os.path.exists(f"{srt_file}.dummy"):
                     logging.warning(f"Dummy file {srt_file}.dummy already exists for: {file}. Check video file.")  # Log warning instead of print
 
-    print("Done!")  # Log instead of print
+    # print("Done!")  # Log instead of print
     time.sleep(10)
