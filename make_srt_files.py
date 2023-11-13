@@ -43,6 +43,9 @@ primary_folder = sys.argv[5] if len(sys.argv) > 5 else get_input(
 delete_primary_files = sys.argv[6] if len(sys.argv) > 6 else get_input(
     "Delete videos in primary folder after the transcribing (default: Y/Yes, N/No", "N")
 
+primary_language = sys.argv[7] if len(sys.argv) > 7 else get_input(
+    f"Set language for transcribing files in primary folder (default: auto for autodetect)","auto")
+
 def get_file_size(filepath):
     with open(filepath, "r") as file:
         file.seek(0, 2)
@@ -62,54 +65,82 @@ def is_file_ready(filepath):
         return False
 
 
-def command_line(cmd):
-    start_time = time.time()
-    subprocess.run(cmd, shell=True)
-    end_time = time.time()
+def command_line(cmd, file, timeout):
+    try:
+        start_time = time.time()
+        subprocess.run(cmd, shell=True, timeout=timeout)
+        end_time = time.time()
 
-    duration = end_time - start_time
-    duration_td = datetime.timedelta(seconds=duration)
-    dt = datetime.datetime(1, 1, 1) + duration_td
+        duration = end_time - start_time
+        duration_td = datetime.timedelta(seconds=duration)
+        dt = datetime.datetime(1, 1, 1) + duration_td
 
-    formatted_time = dt.strftime("%H:%M:%S")
-    logging.info(f"Subtitles for {file} created in {formatted_time}.")  # Log instead of print
+        formatted_time = dt.strftime("%H:%M:%S")
+        logging.info(f"Subtitles for {file} created in {formatted_time}.")
+    except subprocess.TimeoutExpired:
+        logging.error(f"Process for {file} timed out. Terminating the process and moving to next file.")
 
 
-def transcribe_file(file, language, delete_files):
-    srt_file = os.path.join(os.path.splitext(file)[0] + '.srt')
-    if not os.path.exists(srt_file) and not os.path.exists(f"{srt_file}.dummy"):
+def get_video_duration(file):
+    """Get the duration of the video file in seconds."""
+    cmd = f"ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{file}\""
+    try:
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        duration = float(result.stdout)
+        return duration
+    except Exception as e:
+        logging.error(f"Error getting duration for {file}: {e}")
+        return None
 
-        logging.info(f"Processing: {file}")  # Log instead of print
 
-        with open(f"{srt_file}.dummy", 'w') as dummy:
-            dummy.write("PROCESSING...")
+def transcribe_file(file, language, delete_files, add_to_timeout_sek=600):
+    try:
+        srt_file = os.path.join(os.path.splitext(file)[0] + '.srt')
+        if not os.path.exists(srt_file) and not os.path.exists(f"{srt_file}.dummy"):
 
-        try:
-            # Checking of end of uploading file on disk
-            while not is_file_ready(file):
-                pass
+            logging.info(f"Processing: {file}")  # Log instead of print
 
-            if language == "AUTO":
-                cmd = f'whisper --model large-v2 "{file}" --output_dir "{os.path.dirname(file)}"'
-            else:
-                cmd = f'whisper --model large-v2 "{file}" --output_dir "{os.path.dirname(file)}" --language {language}'
-            command_line(cmd)
-            # waiting the appearing of subtitles
-            while not os.path.exists(srt_file):
-                time.sleep(10)
+            with open(f"{srt_file}.dummy", 'w') as dummy:
+                dummy.write("PROCESSING...")
 
-            os.remove(f"{srt_file}.dummy")
-            if delete_files == "Y":
-                print(f"Deleting video file {file}")
-                os.remove(file)
-        except:
-            logging.error(f"Some problems with {file}")  # Log error instead of print
-    else:
-        if os.path.exists(srt_file):
-            logging.warning(f"SRT file already exists for: {file}.")
-        if os.path.exists(f"{srt_file}.dummy"):
-            logging.warning(
-                f"Dummy file {srt_file}.dummy already exists for: {file}. Check video file.")  # Log warning instead of print
+            try:
+                # Checking of end of uploading file on disk
+                while not is_file_ready(file):
+                    pass
+
+                # Get video duration
+                video_duration = get_video_duration(file)
+                if video_duration is None:
+                    raise Exception("Unable to determine video duration")
+
+                # Set a longer timeout than the duration of the video
+                timeout_duration = video_duration + add_to_timeout_sek  # Adding 10 minutes buffer
+                logging.info(f"Set timeout for processing: {file} equal to {timeout_duration}")  # Log instead of print
+
+                if language == "AUTO":
+                    cmd = f'whisper --model large-v2 "{file}" --output_dir "{os.path.dirname(file)}"'
+                else:
+                    cmd = f'whisper --model large-v2 "{file}" --output_dir "{os.path.dirname(file)}" --language {language}'
+                command_line(cmd, file, timeout_duration)
+                # waiting the appearing of subtitles
+                while not os.path.exists(srt_file):
+                    time.sleep(10)
+
+                os.remove(f"{srt_file}.dummy")
+                if delete_files == "Y":
+                    print(f"Deleting video file {file}")
+                    os.remove(file)
+            except:
+                logging.error(f"Some problems with {file}")  # Log error instead of print
+        else:
+            if os.path.exists(srt_file):
+                logging.warning(f"SRT file already exists for: {file}.")
+            if os.path.exists(f"{srt_file}.dummy"):
+                logging.warning(
+                    f"Dummy file {srt_file}.dummy already exists for: {file}. Check video file.")  # Log warning instead of print
+    except Exception as e:
+        logging.error(f"Some problems with {file}: {e}")
+
 
 def transcribe_folder(dir_path,extension,language, delete_files, alias):
     if dir_path!="":
@@ -122,7 +153,7 @@ def transcribe_folder(dir_path,extension,language, delete_files, alias):
 while True:
     for extension in extensions:  # Loop over each extension
         # look for files in primary folder
-        transcribe_folder(primary_folder,extension,language,delete_primary_files,"primary")
+        transcribe_folder(primary_folder,extension,primary_language,delete_primary_files,"primary")
 
     for extension in extensions:  # Loop over each extension
         #look file in secondary folder`
@@ -131,7 +162,7 @@ while True:
             transcribe_file(file, language, delete_files)
             #after transcribing look for files in primary folder
             for extension in extensions:
-                transcribe_folder(primary_folder,extension,language,delete_primary_files, "primary")
+                transcribe_folder(primary_folder,extension,primary_language,delete_primary_files, "primary")
 
     # print("Done!")  # Log instead of print
     time.sleep(10)
