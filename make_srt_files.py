@@ -117,7 +117,7 @@ def transcribe_file(file, language, delete_files, add_to_timeout_sek=600):
                 timeout_duration = video_duration + add_to_timeout_sek  # Adding 10 minutes buffer
                 logging.info(f"Set timeout for processing: {file} equal to {timeout_duration}")  # Log instead of print
 
-                if language == "AUTO":
+                if language.upper() == "AUTO":
                     cmd = f'whisper --model large-v2 "{file}" --output_dir "{os.path.dirname(file)}"'
                 else:
                     cmd = f'whisper --model large-v2 "{file}" --output_dir "{os.path.dirname(file)}" --language {language}'
