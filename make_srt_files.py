@@ -162,7 +162,10 @@ def transcribe_language_subfolder(dir_path, extension, delete_files, alias):
                 subdir_path = os.path.join(dir_path, subdir)
                 search_dir = os.path.join(subdir_path, f"**/*.{extension}")
                 for file in glob(search_dir, recursive=True):
-                    transcribe_file(file, subdir, delete_files)  # Use subdir name as language
+                    if subdir == "English":
+                        transcribe_file(file, "en", delete_files)  # Use subdir name as language
+                    else:
+                        transcribe_file(file, subdir, delete_files)
             else:
                 print(f"Directory {subdir} does not match a supported language.")
     else:
