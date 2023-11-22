@@ -142,7 +142,7 @@ def transcribe_file(file, language, delete_files, add_to_timeout_sek=600):
         logging.error(f"Some problems with {file}: {e}")
 
 
-def transcribe_folder(dir_path,extension,language, delete_files, alias):
+def transcribe_folder(dir_path, extension, language, delete_files, alias):
     if dir_path!="":
         search_dir = os.path.join(dir_path, f"**/*.{extension}")
         for file in glob(search_dir, recursive=True):
@@ -150,9 +150,28 @@ def transcribe_folder(dir_path,extension,language, delete_files, alias):
     else:
         print(f"Directory for folder {alias} **/*.{extension} is empty.")
 
+def transcribe_language_subfolder(dir_path, extension, delete_files, alias):
+    if dir_path != "":
+        # Check for subdirectories in the primary folder
+        subdirs = [d for d in os.listdir(dir_path) if os.path.isdir(os.path.join(dir_path, d))]
+        supported_languages = ['English', 'Russian', 'Ukrainian']  # List of languages supported by Whisper
+
+        for subdir in subdirs:
+            # Check if the subdir is a supported language
+            if subdir in supported_languages:
+                subdir_path = os.path.join(dir_path, subdir)
+                search_dir = os.path.join(subdir_path, f"**/*.{extension}")
+                for file in glob(search_dir, recursive=True):
+                    transcribe_file(file, subdir, delete_files)  # Use subdir name as language
+            else:
+                print(f"Directory {subdir} does not match a supported language.")
+    else:
+        print(f"Directory for folder {alias} **/*.{extension} is empty.")
+
 while True:
     for extension in extensions:  # Loop over each extension
         # look for files in primary folder
+        transcribe_language_subfolder(primary_folder,extension,delete_primary_files,"primary language subfolder")
         transcribe_folder(primary_folder,extension,primary_language,delete_primary_files,"primary")
 
     for extension in extensions:  # Loop over each extension
@@ -162,6 +181,8 @@ while True:
             transcribe_file(file, language, delete_files)
             #after transcribing look for files in primary folder
             for extension in extensions:
+                transcribe_language_subfolder(primary_folder, extension, delete_primary_files,
+                                              "primary language subfolder")
                 transcribe_folder(primary_folder,extension,primary_language,delete_primary_files, "primary")
 
     # print("Done!")  # Log instead of print
