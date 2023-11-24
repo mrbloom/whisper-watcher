@@ -127,9 +127,10 @@ def transcribe_file(file, language, delete_files, add_to_timeout_sek=600):
                     time.sleep(10)
 
                 os.remove(f"{srt_file}.dummy")
+                logging.info(f"{srt_file}.dummy")
                 if delete_files == "Y":
-                    print(f"Deleting video file {file}")
                     os.remove(file)
+                    logging.info(f"Deleting video file {file}")
             except:
                 logging.error(f"Some problems with {file}")  # Log error instead of print
         else:
@@ -148,7 +149,7 @@ def transcribe_folder(dir_path, extension, language, delete_files, alias):
         for file in glob(search_dir, recursive=True):
             transcribe_file(file, language, delete_files)
     else:
-        print(f"Directory for folder {alias} **/*.{extension} is empty.")
+        logging.info(f"Directory for folder {alias} **/*.{extension} is empty.")
 
 def transcribe_language_subfolder(dir_path, extension, delete_files, alias):
     if dir_path != "":
@@ -167,9 +168,9 @@ def transcribe_language_subfolder(dir_path, extension, delete_files, alias):
                     else:
                         transcribe_file(file, subdir, delete_files)
             else:
-                print(f"Directory {subdir} does not match a supported language.")
+                logging.error(f"Directory {subdir} does not match a supported language.")
     else:
-        print(f"Directory for folder {alias} **/*.{extension} is empty.")
+        logging.info(f"Directory for folder {alias} **/*.{extension} is empty.")
 
 while True:
     for extension in extensions:  # Loop over each extension
