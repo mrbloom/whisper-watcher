@@ -112,7 +112,7 @@ def transcribe_language_subfolders(directory, extensions, delete_files):
     for extension in extensions:
         subdirs = [d for d in os.listdir(directory) if os.path.isdir(os.path.join(directory, d))]
         supported_languages = ['English', 'Russian', 'Ukrainian']  # List of languages supported by Whisper
-        audio_channel_folders = [f"{i}ch" for i in range(1,6)]
+        audio_channel_folders = [f"{i}ch" for i in range(1,32)]
 
         for subdir in subdirs:
             # Check if the subdir is a supported language
