@@ -126,6 +126,8 @@ def transcribe_language_subfolders(directory, extensions, delete_files):
                         transcribe_file(file, subdir, delete_files)
             elif subdir in audio_channel_folders:
                 pass
+            elif subdir == 'multilang':
+                pass
             else:
                 logging.error(f"Directory {subdir} does not match a supported language.")
 

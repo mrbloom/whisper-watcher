@@ -1,4 +1,5 @@
 import argparse
+import re
 import subprocess
 import os
 import glob
@@ -87,20 +88,76 @@ def watch_and_process(root_folder, folders, extensions):
                 else:
                     print(f"Could not determine codec for {video_file}")
 
+# Function to extract a specific audio channel
+def extract_audio(input_video_path, output_audio_path, channel):
+    try:
+        command = [
+            'ffmpeg',
+            '-i', input_video_path,       # Input file
+            '-map', f'0:a:{channel}',     # Selecting the specific audio stream
+            '-c:a', 'copy',               # Copying the audio codec (no encoding)
+            output_audio_path             # Output file
+        ]
+        subprocess.run(command, check=True)
+        print(f"Audio channel {channel + 1} extracted to '{output_audio_path}' successfully.")
+    except subprocess.CalledProcessError as e:
+        print(f"An error occurred: {e}")
+
+# Function to parse the file name for language and channel info
+def parse_filename_for_language(filename):
+    # Regex pattern to match language and channel info
+    pattern = r"_(\d)([A-Z]+)\.[^\.]+$"
+    matches = re.findall(pattern, filename, re.IGNORECASE)
+    return [(int(channel), lang.upper()) for channel, lang in matches]
+
+# Function to map language codes to full names
+def map_language_code_to_name(lang_code):
+    mapping = {
+        "RUS": "Russian",
+        "RU": "Russian",
+        "UKR": "Ukraine",
+        "UK": "Ukraine",
+        "ENG": "English",
+        "EN": "English"
+    }
+    return mapping.get(lang_code.upper(), "Unknown")
+
+# Watching folders and processing files with root directory
+def watch_and_process_multilang(root_folder, extensions, supported_langs = ["Russian", "English", "Ukrainian"]):
+    for ext in extensions:
+        for video_file in glob.glob(f"{root_folder}/*.{ext}"):
+            if is_file_ready(video_file):
+                language_info = parse_filename_for_language(os.path.basename(video_file))
+                for channel, lang_code in language_info:
+                    lang_name = map_language_code_to_name(lang_code)
+                    if lang_name in supported_langs:
+
+                        ext = get_audio_extension(get_audio_codec(video_file))
+                        output_audio_path = f"{video_file.rsplit('.', 1)[0]}_{channel}channel_{lang_name}.{ext}"
+                        extract_audio(video_file, output_audio_path, channel - 1)
+                        print(f"Extracted {lang_name} audio to {output_audio_path}")
+                os.remove(video_file)
+                print(f"Everything is extracted. {video_file} is deleted.")
+
+
 
 def main():
     parser = argparse.ArgumentParser(description='Process some videos.')
     parser.add_argument("-d", "--directory", default=".", type=str, help='Root folder to search for video files')
+    parser.add_argument("-m", "--multilang", default=".", type=str, help='Root folder to search for video files with multilang tracks (name of file must be _1UKR_2ENG.avi or _3RUS.mxf)')
+
     args = parser.parse_args()
 
     directory = args.directory
+    multilang = args.multilang
     folders_to_watch = ['1ch', '2ch', '3ch', '4ch', '5ch', '6ch']
-    video_extensions = ['mp4', 'mkv', 'avi']
+    video_extensions = ['mp4', 'mkv', 'avi', 'aac', 'mp3']
     print(f"In {directory} in folders {', '.join(folders_to_watch)} lok for {', '.join(video_extensions)}")
 
     while True:
         print(f"Watch and process directory {directory}")
         watch_and_process(directory, folders_to_watch, video_extensions)
+        watch_and_process_multilang(multilang, video_extensions)
         time.sleep(10)
 
 if __name__ == "__main__":
