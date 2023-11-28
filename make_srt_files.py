@@ -3,7 +3,6 @@ import datetime
 import logging
 import os
 import subprocess
-import sys
 import time
 from glob import glob
 
@@ -136,7 +135,7 @@ def parse_arguments():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Video file transcription script.")
     parser.add_argument("-d", "--dir_path", default=".", help="Directory for files")
-    parser.add_argument("-e", "--extensions", default="ts,mp4,mkv,mxf,wav,mp3", help="File extensions (comma separated)")
+    parser.add_argument("-e", "--extensions", default="ts,mp4,mkv,mxf,wav,mp3,aac", help="File extensions (comma separated)")
     parser.add_argument("-df", "--delete_files", default="N", choices=["Y", "N"],
                         help="Delete files after transcribing (Y/N)")
     parser.add_argument("-l", "--language", default="Russian", help="Language for transcribing files")
