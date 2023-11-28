@@ -58,6 +58,10 @@ def get_video_duration(file):
 
 
 def transcribe_file(file, language, delete_files, add_to_timeout_sec=600):
+    if not is_file_ready(file):
+        logging.error(f"File {file} is not ready for processing.")
+        return
+
     """Transcribe a video file."""
     srt_file = os.path.join(os.path.splitext(file)[0] + '.srt')
     if os.path.exists(srt_file) or os.path.exists(f"{srt_file}.dummy"):
@@ -66,10 +70,6 @@ def transcribe_file(file, language, delete_files, add_to_timeout_sec=600):
 
     logging.info(f"Processing: {file} with language {language}. Delete files = {delete_files}")
     open(f"{srt_file}.dummy", 'w').close()
-
-    if not is_file_ready(file):
-        logging.error(f"File {file} is not ready for processing.")
-        return
 
     video_duration = get_video_duration(file)
     if video_duration is None:
