@@ -31,6 +31,10 @@ def get_audio_extension(codec_name):
         return "ogg"
     elif codec_name == "opus":
         return "opus"
+    elif "pcm" in codec_name:
+        return "wav"
+    elif "mpga" in codec_name:
+        return "mp3"
     # Add more mappings as needed
     else:
         return "audio"  # Generic extension for unknown codecs
@@ -94,7 +98,7 @@ def extract_audio(input_video_path, output_audio_path, channel):
         command = [
             'ffmpeg',
             '-i', input_video_path,       # Input file
-            '-map', f'0:a:{channel}',     # Selecting the specific audio stream
+            '-map', f'0:a:{channel-1}',     # Selecting the specific audio stream
             '-c:a', 'copy',               # Copying the audio codec (no encoding)
             output_audio_path             # Output file
         ]
@@ -106,7 +110,8 @@ def extract_audio(input_video_path, output_audio_path, channel):
 # Function to parse the file name for language and channel info
 def parse_filename_for_language(filename):
     # Regex pattern to match language and channel info
-    pattern = r"_(\d)([A-Z]+)\.[^\.]+$"
+    # pattern = r"_(\d)([A-Z]+)\.[^\.]+$"
+    pattern = r"_(\d)([A-Z]+)"
     matches = re.findall(pattern, filename, re.IGNORECASE)
     return [(int(channel), lang.upper()) for channel, lang in matches]
 
@@ -128,6 +133,7 @@ def watch_and_process_multilang(root_folder, extensions, supported_langs = ["Rus
         for video_file in glob.glob(f"{root_folder}/*.{ext}"):
             if is_file_ready(video_file):
                 language_info = parse_filename_for_language(os.path.basename(video_file))
+                print(f"language info = {language_info}")
                 for channel, lang_code in language_info:
                     lang_name = map_language_code_to_name(lang_code)
                     if lang_name in supported_langs:
@@ -151,7 +157,7 @@ def main():
     directory = args.directory
     multilang = args.multilang
     folders_to_watch = ['1ch', '2ch', '3ch', '4ch', '5ch', '6ch']
-    video_extensions = ['mp4', 'mkv', 'avi', 'aac', 'mp3']
+    video_extensions = ['mp4', 'mkv', 'avi', 'mxf']
     print(f"In {directory} in folders {', '.join(folders_to_watch)} lok for {', '.join(video_extensions)}")
 
     while True:
