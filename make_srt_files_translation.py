@@ -57,18 +57,33 @@ def get_video_duration(file):
         return None
 
 
-def transcribe_file(file, language, delete_files, add_to_timeout_sec=600):
+
+
+def translate_directory(directory, extensions, delete_files):
+    """Transcribe all files in a directory with given extensions."""
+    if not directory:
+        logging.info("No directory specified for translation.")
+        return
+
+    for extension in extensions:
+        file_path = os.path.join(directory, f"*.{extension}")
+        files = glob(file_path)
+        for file in files:
+            translate_file(file, delete_files)
+
+
+def translate_file(file, delete_files, add_to_timeout_sec=600):
     if not is_file_ready(file):
         logging.error(f"File {file} is not ready for processing.")
         return
 
-    """Transcribe a video file."""
+    """Translate a video file."""
     srt_file = os.path.join(os.path.splitext(file)[0] + '.srt')
     if os.path.exists(srt_file) or os.path.exists(f"{srt_file}.dummy"):
         logging.warning(f"Skipping {file} as SRT or dummy file exists.")
         return
 
-    logging.info(f"Processing: {file} with language {language}. Delete files = {delete_files}")
+    logging.info(f"Processing: {file} with translation in English. Delete files = {delete_files}")
     open(f"{srt_file}.dummy", 'w').close()
 
     video_duration = get_video_duration(file)
@@ -77,10 +92,9 @@ def transcribe_file(file, language, delete_files, add_to_timeout_sec=600):
         return
 
     timeout_duration = video_duration + add_to_timeout_sec
-    if language.upper() == "AUTO":
-        cmd = f'whisper --model large-v2 "{file}" --output_dir "{os.path.dirname(file)}"'
-    else:
-        cmd = f'whisper --model large-v2 "{file}" --output_dir "{os.path.dirname(file)}" --language {language}'
+    # out_dir = os.path.join(os.path.dirname(file),"English")
+    out_dir = os.path.dirname(file)
+    cmd = f'whisper --model large-v2 "{file}" --output_dir "{out_dir}" --task translate'
     run_command_line(cmd, file, timeout_duration)
 
     if not os.path.exists(srt_file):
@@ -93,73 +107,15 @@ def transcribe_file(file, language, delete_files, add_to_timeout_sec=600):
         logging.info(f"Deleted video file {file}.")
 
 
-def transcribe_directory(directory, extensions, language, delete_files):
-    """Transcribe all files in a directory with given extensions."""
-    if not directory:
-        logging.info("No directory specified for transcription.")
-        return
-
-    for extension in extensions:
-        file_path = os.path.join(directory, f"*.{extension}")
-        files = glob(file_path)
-        for file in files:
-            transcribe_file(file, language, delete_files)
-
-    transcribe_language_subfolders( directory, extensions, delete_files )
-
-
-def transcribe_language_subfolders(directory, extensions, delete_files):
-    for extension in extensions:
-        subdirs = [d for d in os.listdir(directory) if os.path.isdir(os.path.join(directory, d))]
-        supported_languages = ['English', 'Russian', 'Ukrainian']  # List of languages supported by Whisper
-        audio_channel_folders = [f"{i}ch" for i in range(1,32)]
-
-        for subdir in subdirs:
-            # Check if the subdir is a supported language
-            if subdir in supported_languages:
-                subdir_path = os.path.join(directory, subdir)
-                search_dir = os.path.join(subdir_path, f"**/*.{extension}")
-                for file in glob(search_dir, recursive=True):
-                    if subdir == "English":
-                        transcribe_file(file, "en", delete_files)  # Use subdir name as language
-                    else:
-                        transcribe_file(file, subdir, delete_files)
-            elif subdir in audio_channel_folders:
-                pass
-            elif subdir == 'multilang':
-                pass
-            else:
-                logging.error(f"Directory {subdir} does not match a supported language.")
-
-
-
 def parse_arguments():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description="Video file transcription script.")
+    parser = argparse.ArgumentParser(description="Video file translation script.")
     parser.add_argument("-d", "--dir_path", default=".", help="Directory for files")
     parser.add_argument("-e", "--extensions", default="ts,mp4,mkv,mxf,wav,mp3,aac", help="File extensions (comma separated)")
     parser.add_argument("-df", "--delete_files", default="N", choices=["Y", "N"], help="Delete files after transcribing (Y/N)")
-    parser.add_argument("-l", "--language", default="Russian", help="Language for transcribing files")
-
-    parser.add_argument("-bm", "--bk_mask", default="", help="Directory for files that works after primary directory")
-    parser.add_argument("-bl", "--bk_language", default="Russian", help="Language for unprimary files")
-    parser.add_argument("-bd", "--bk_delete", default="N", choices=["Y", "N"], help="Delete background files after transcribing?")
 
     return parser.parse_args()
 
-
-def left_function(pth,extensions,language,delete):
-    if pth[-1] == '"':
-        pth = pth[:-1] # some bug of path with spaces
-    for extension in extensions:
-        file_mask = f"*.{extension}"
-        glob_path = os.path.join(pth,file_mask)
-        for file in glob(glob_path):
-            srt_file = os.path.join(os.path.splitext(file)[0] + '.srt')
-            file_lock = f"{srt_file}.dummy"
-            if not os.path.exists(srt_file) and not os.path.exists(file_lock):
-                transcribe_file(file, language, delete)
-                return
 
 
 def main():
@@ -167,10 +123,9 @@ def main():
     args.extensions = args.extensions.split(',')
 
     while True:
-        transcribe_directory(args.dir_path, args.extensions, args.language, args.delete_files)
-        if args.bk_mask:
-            left_function(args.bk_mask, args.extensions, args.bk_language, args.bk_delete)
+        translate_directory(args.dir_path, args.extensions,  args.delete_files)
         time.sleep(10)
+
 
 
 if __name__ == "__main__":
