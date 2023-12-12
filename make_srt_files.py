@@ -64,9 +64,14 @@ def transcribe_file(file, language, delete_files, add_to_timeout_sec=600):
 
     """Transcribe a video file."""
     srt_file = os.path.join(os.path.splitext(file)[0] + '.srt')
-    if os.path.exists(srt_file) or os.path.exists(f"{srt_file}.dummy"):
-        logging.warning(f"Skipping {file} as SRT or dummy file exists.")
+    if os.path.exists(srt_file):
+        logging.warning(f"Skipping {file} as SRT exists.")
         return
+
+    if os.path.exists(f"{srt_file}.dummy"):
+        logging.warning(f"Skipping {file} as dummy file exists.")
+        return
+
 
     logging.info(f"Processing: {file} with language {language}. Delete files = {delete_files}")
     open(f"{srt_file}.dummy", 'w').close()
