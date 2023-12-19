@@ -3,6 +3,7 @@ import datetime
 import logging
 import os
 import subprocess
+import threading
 import time
 from glob import glob
 import traceback
@@ -57,6 +58,32 @@ def get_video_duration(file):
         return None
 
 
+# def exit_after(s, quit_function):
+#     '''
+#     use as decorator to exit process if
+#     function takes longer than s seconds
+#     '''
+#
+#     def outer(fn):
+#         def inner(*args, **kwargs):
+#             timer = threading.Timer(s, quit_function, args=[fn.__name__])
+#             timer.start()
+#             try:
+#                 result = fn(*args, **kwargs)
+#             finally:
+#                 timer.cancel()
+#             return result
+#
+#         return inner
+#
+#     return outer
+#
+#
+# def quit_func():
+#     logging.error("Exit after 8000 sek")
+
+
+# @exit_after(8000, quit_func)
 def transcribe_file(file, language, delete_files, add_to_timeout_sec=600):
     if not is_file_ready(file):
         logging.error(f"File {file} is not ready for processing.")
@@ -71,7 +98,6 @@ def transcribe_file(file, language, delete_files, add_to_timeout_sec=600):
     if os.path.exists(f"{srt_file}.dummy"):
         logging.warning(f"Skipping {file} as dummy file exists.")
         return
-
 
     logging.info(f"Processing: {file} with language {language}. Delete files = {delete_files}")
     open(f"{srt_file}.dummy", 'w').close()
@@ -110,14 +136,14 @@ def transcribe_directory(directory, extensions, language, delete_files):
         for file in files:
             transcribe_file(file, language, delete_files)
 
-    transcribe_language_subfolders( directory, extensions, delete_files )
+    transcribe_language_subfolders(directory, extensions, delete_files)
 
 
 def transcribe_language_subfolders(directory, extensions, delete_files):
     for extension in extensions:
         subdirs = [d for d in os.listdir(directory) if os.path.isdir(os.path.join(directory, d))]
         supported_languages = ['English', 'Russian', 'Ukrainian']  # List of languages supported by Whisper
-        audio_channel_folders = [f"{i}ch" for i in range(1,32)]
+        audio_channel_folders = [f"{i}ch" for i in range(1, 32)]
 
         for subdir in subdirs:
             # Check if the subdir is a supported language
@@ -137,28 +163,30 @@ def transcribe_language_subfolders(directory, extensions, delete_files):
                 logging.error(f"Directory {subdir} does not match a supported language.")
 
 
-
 def parse_arguments():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Video file transcription script.")
     parser.add_argument("-d", "--dir_path", default=".", help="Directory for files")
-    parser.add_argument("-e", "--extensions", default="ts,mp4,mkv,mxf,wav,mp3,aac", help="File extensions (comma separated)")
-    parser.add_argument("-df", "--delete_files", default="N", choices=["Y", "N"], help="Delete files after transcribing (Y/N)")
+    parser.add_argument("-e", "--extensions", default="ts,mp4,mkv,mxf,wav,mp3,aac",
+                        help="File extensions (comma separated)")
+    parser.add_argument("-df", "--delete_files", default="N", choices=["Y", "N"],
+                        help="Delete files after transcribing (Y/N)")
     parser.add_argument("-l", "--language", default="Russian", help="Language for transcribing files")
 
     parser.add_argument("-bm", "--bk_mask", default="", help="Directory for files that works after primary directory")
     parser.add_argument("-bl", "--bk_language", default="Russian", help="Language for unprimary files")
-    parser.add_argument("-bd", "--bk_delete", default="N", choices=["Y", "N"], help="Delete background files after transcribing?")
+    parser.add_argument("-bd", "--bk_delete", default="N", choices=["Y", "N"],
+                        help="Delete background files after transcribing?")
 
     return parser.parse_args()
 
 
-def left_function(pth,extensions,language,delete):
+def left_function(pth, extensions, language, delete):
     if pth[-1] == '"':
-        pth = pth[:-1] # some bug of path with spaces
+        pth = pth[:-1]  # some bug of path with spaces
     for extension in extensions:
         file_mask = f"*.{extension}"
-        glob_path = os.path.join(pth,file_mask)
+        glob_path = os.path.join(pth, file_mask)
         for file in glob(glob_path):
             srt_file = os.path.join(os.path.splitext(file)[0] + '.srt')
             file_lock = f"{srt_file}.dummy"
