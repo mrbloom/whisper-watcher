@@ -57,33 +57,7 @@ def get_video_duration(file):
         logging.error(f"Error getting duration for {file}: {e}")
         return None
 
-
-# def exit_after(s, quit_function):
-#     '''
-#     use as decorator to exit process if
-#     function takes longer than s seconds
-#     '''
-#
-#     def outer(fn):
-#         def inner(*args, **kwargs):
-#             timer = threading.Timer(s, quit_function, args=[fn.__name__])
-#             timer.start()
-#             try:
-#                 result = fn(*args, **kwargs)
-#             finally:
-#                 timer.cancel()
-#             return result
-#
-#         return inner
-#
-#     return outer
-#
-#
-# def quit_func():
-#     logging.error("Exit after 8000 sek")
-
-
-# @exit_after(8000, quit_func)
+    
 def transcribe_file(file, language, delete_files, add_to_timeout_sec=600):
     if not is_file_ready(file):
         logging.error(f"File {file} is not ready for processing.")
@@ -135,6 +109,7 @@ def transcribe_directory(directory, extensions, language, delete_files):
         files = glob(file_path)
         for file in files:
             transcribe_file(file, language, delete_files)
+            logging.info("Move to next file from func transcribe_directory")
 
     transcribe_language_subfolders(directory, extensions, delete_files)
 
@@ -155,6 +130,7 @@ def transcribe_language_subfolders(directory, extensions, delete_files):
                         transcribe_file(file, "en", delete_files)  # Use subdir name as language
                     else:
                         transcribe_file(file, subdir, delete_files)
+                    logging.info("Move to next file from func transcribe_lanuage_subfolders")
             elif subdir in audio_channel_folders:
                 pass
             elif subdir == 'multilang':
