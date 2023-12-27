@@ -83,9 +83,9 @@ def transcribe_file(file, language, delete_files, add_to_timeout_sec=600):
 
     timeout_duration = video_duration + add_to_timeout_sec
     if language.upper() == "AUTO":
-        cmd = f'whisper --model large-v2 "{file}" --output_dir "{os.path.dirname(file)}"'
+        cmd = f'whisper --model large-v3 "{file}" --output_dir "{os.path.dirname(file)}" --device cuda'
     else:
-        cmd = f'whisper --model large-v2 "{file}" --output_dir "{os.path.dirname(file)}" --language {language}'
+        cmd = f'whisper --model large-v3 "{file}" --output_dir "{os.path.dirname(file)}" --language {language} --device cuda'
     run_command_line(cmd, file, timeout_duration)
 
     if not os.path.exists(srt_file):
@@ -109,7 +109,7 @@ def transcribe_directory(directory, extensions, language, delete_files):
         files = glob(file_path)
         for file in files:
             transcribe_file(file, language, delete_files)
-            logging.info("Move to next file from func transcribe_directory")
+            logging.info("Move to next file from func transcribe_directory. File was {file}")
 
     transcribe_language_subfolders(directory, extensions, delete_files)
 
@@ -130,10 +130,12 @@ def transcribe_language_subfolders(directory, extensions, delete_files):
                         transcribe_file(file, "en", delete_files)  # Use subdir name as language
                     else:
                         transcribe_file(file, subdir, delete_files)
-                    logging.info("Move to next file from func transcribe_lanuage_subfolders")
+                    logging.info(f"Move to next file from func transcribe_lanuage_subfolders. File was {file}")
             elif subdir in audio_channel_folders:
                 pass
             elif subdir == 'multilang':
+                pass
+            elif subdir == '!bugs':
                 pass
             else:
                 logging.error(f"Directory {subdir} does not match a supported language.")
@@ -176,8 +178,10 @@ def main():
     args.extensions = args.extensions.split(',')
 
     while True:
+        logging.info("Starting func transcribe_directory.")
         transcribe_directory(args.dir_path, args.extensions, args.language, args.delete_files)
         if args.bk_mask:
+            logging.info("Starting func left_function.")
             left_function(args.bk_mask, args.extensions, args.bk_language, args.bk_delete)
         time.sleep(10)
 
