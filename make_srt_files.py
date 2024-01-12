@@ -73,19 +73,19 @@ def transcribe_file(file, language, delete_files, add_to_timeout_sec=600):
         logging.warning(f"Skipping {file} as dummy file exists.")
         return
 
-    logging.info(f"Processing: {file} with language {language}. Delete files = {delete_files}")
-    open(f"{srt_file}.dummy", 'w').close()
-
     video_duration = get_video_duration(file)
     if video_duration is None:
         logging.error(f"Unable to determine video duration for {file}.")
         return
 
+    logging.info(f"Processing: {file} with language {language}. Delete files = {delete_files}. Duration = {video_duration/60} min.")
+    open(f"{srt_file}.dummy", 'w').close()
+    
     timeout_duration = video_duration + add_to_timeout_sec
     if language.upper() == "AUTO":
-        cmd = f'whisper --model large-v3 "{file}" --output_dir "{os.path.dirname(file)}" --device cuda'
+        cmd = f'whisper --model large-v3 "{file}" --output_dir "{os.path.dirname(file)}" --device cuda --output_format srt'
     else:
-        cmd = f'whisper --model large-v3 "{file}" --output_dir "{os.path.dirname(file)}" --language {language} --device cuda'
+        cmd = f'whisper --model large-v3 "{file}" --output_dir "{os.path.dirname(file)}" --language {language} --device cuda --output_format srt'
     run_command_line(cmd, file, timeout_duration)
 
     if not os.path.exists(srt_file):
@@ -180,9 +180,9 @@ def main():
     while True:
         logging.info("Starting func transcribe_directory.")
         transcribe_directory(args.dir_path, args.extensions, args.language, args.delete_files)
-        if args.bk_mask:
-            logging.info("Starting func left_function.")
-            left_function(args.bk_mask, args.extensions, args.bk_language, args.bk_delete)
+        # if args.bk_mask:
+        #     logging.info("Starting func left_function.")
+        #     left_function(args.bk_mask, args.extensions, args.bk_language, args.bk_delete)
         time.sleep(10)
 
 
