@@ -94,7 +94,7 @@ def translate_file(file, delete_files, add_to_timeout_sec=600):
     timeout_duration = video_duration + add_to_timeout_sec
     # out_dir = os.path.join(os.path.dirname(file),"English")
     out_dir = os.path.dirname(file)
-    cmd = f'whisper --model large-v2 "{file}" --output_dir "{out_dir}" --task translate'
+    cmd = f'whisper --model large-v3 "{file}" --output_dir "{out_dir}" --task translate'
     run_command_line(cmd, file, timeout_duration)
 
     if not os.path.exists(srt_file):
