@@ -20,15 +20,15 @@ def get_file_size(filepath):
         return file.tell()
 
 
-def is_file_ready(filepath):
-    """Check if the file is ready for processing."""
+def is_file_ready(filepath, timeout=12):
     try:
+        """Check if the file is ready for processing."""
         size0 = get_file_size(filepath)
-        time.sleep(3)
+        time.sleep(timeout)
         size1 = get_file_size(filepath)
-        time.sleep(3)
-        size2 = get_file_size(filepath)
-        return size0 == size1 == size2
+        if size1 != size0:
+            return False
+        return True
     except OSError:
         return False
 
