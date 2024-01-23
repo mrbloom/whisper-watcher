@@ -78,8 +78,12 @@ def transcribe_file(file, language, delete_files, add_to_timeout_sec=600):
         logging.error(f"Unable to determine video duration for {file}.")
         return
 
-    logging.info(f"Processing: {file} with language {language}. Delete files = {delete_files}. Duration = {video_duration/60} min.")
-    open(f"{srt_file}.dummy", 'w').close()
+    if not os.path.exists(f"{srt_file}.dummy"):
+        open(f"{srt_file}.dummy", 'w').close()
+        logging.info(
+            f"Processing: {file} with language {language}. Delete files = {delete_files}. Duration = {video_duration / 60} min.")
+    else:
+        return
     
     timeout_duration = video_duration + add_to_timeout_sec
     if language.upper() == "AUTO":
