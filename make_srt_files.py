@@ -58,7 +58,7 @@ def get_video_duration(file):
         logging.error(f"Error getting duration for {file}: {e}")
         return None
 
-    
+
 def transcribe_file(file, language, delete_files, add_to_timeout_sec=600):
     if not is_file_ready(file):
         logging.error(f"File {file} is not ready for processing.")
@@ -186,9 +186,9 @@ def main():
     while True:
         logging.info("Starting func transcribe_directory.")
         transcribe_directory(args.dir_path, args.extensions, args.language, args.delete_files)
-        # if args.bk_mask:
-        #     logging.info("Starting func left_function.")
-        #     left_function(args.bk_mask, args.extensions, args.bk_language, args.bk_delete)
+        if args.bk_mask:
+            logging.info("Starting func left_function.")
+            left_function(args.bk_mask, args.extensions, args.bk_language, args.bk_delete)
         time.sleep(10)
 
 
