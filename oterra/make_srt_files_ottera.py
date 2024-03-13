@@ -10,9 +10,26 @@ import traceback
 from random import random
 from reduplicate import make_reduplicate
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s',
-                    handlers=[logging.FileHandler("../subtitles_log.log"), logging.StreamHandler()])
+
+def initialize_logging(log_file_path):
+    """
+    Initializes logging with the specified log file path. Ensures that the directory for the log file exists.
+
+    Args:
+    log_file_path: str. The path where the log file should be stored.
+    """
+    # Extract the directory path from the log file path
+    log_directory = os.path.dirname(log_file_path)
+
+    # Create the directory if it does not exist
+    if not os.path.exists(log_directory):
+        os.makedirs(log_directory, exist_ok=True)
+
+    # Configure logging to use the log file path
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s - %(levelname)s - %(message)s',
+                        handlers=[logging.FileHandler(log_file_path), logging.StreamHandler()])
+
 
 
 def get_file_size(filepath):
@@ -196,6 +213,9 @@ def left_function(pth, extensions, language, delete, task):
 
 
 def main():
+    log_file_path = r"Z:\fast_channels\OTERRA\!LOGS\whisper_logs.txt"
+    initialize_logging(log_file_path)
+
     args = parse_arguments()
     args.extensions = args.extensions.split(',')
 
