@@ -31,7 +31,6 @@ def initialize_logging(log_file_path):
                         handlers=[logging.FileHandler(log_file_path), logging.StreamHandler()])
 
 
-
 def get_file_size(filepath):
     """Get the size of a file."""
     with open(filepath, "r") as file:
@@ -88,7 +87,7 @@ def get_video_duration(file):
         return None
 
 
-def transcribe_file(file, language, delete_files, task, add_to_timeout_sec=600):
+def transcribe_file(file, language, delete_files, task, model, add_to_timeout_sec=600):
     """Transcribe a video file."""
     srt_file = os.path.join(os.path.splitext(file)[0] + '.srt')
     if os.path.exists(srt_file):
@@ -99,7 +98,7 @@ def transcribe_file(file, language, delete_files, task, add_to_timeout_sec=600):
         logging.error(f"File {file} is not ready for processing.")
         return
 
-    time.sleep(random()*1) #### Why? What the fuck
+    time.sleep(random() * 1)  #### Why? What the fuck
     if os.path.exists(f"{srt_file}.dummy"):
         logging.warning(f"Skipping {file} as dummy file exists.")
         return
@@ -116,9 +115,9 @@ def transcribe_file(file, language, delete_files, task, add_to_timeout_sec=600):
 
     timeout_duration = video_duration + add_to_timeout_sec
     if language.upper() == "AUTO":
-        cmd = f'whisper --model large-v3 "{file}" --output_dir "{os.path.dirname(file)}" --device cuda --output_format srt --task {task}'
+        cmd = f'whisper --model {model} "{file}" --output_dir "{os.path.dirname(file)}" --device cuda --output_format srt --task {task}'
     else:
-        cmd = f'whisper --model large-v3 "{file}" --output_dir "{os.path.dirname(file)}" --language {language} --device cuda --output_format srt --task {task}'
+        cmd = f'whisper --model {model} "{file}" --output_dir "{os.path.dirname(file)}" --language {language} --device cuda --output_format srt --task {task}'
     run_command_line(cmd, file, timeout_duration)
 
     if not os.path.exists(srt_file):
@@ -131,19 +130,20 @@ def transcribe_file(file, language, delete_files, task, add_to_timeout_sec=600):
         logging.info(f"Deleted video file {file}.")
 
 
-
-
-def transcribe_directory(directory, extensions, language, delete_files, task):
+def transcribe_directory(directory, extensions, language, delete_files, task, model):
     """Transcribe all files in a directory with given extensions."""
     if not directory:
-        logging.info("No directory specified for transcription.")
+        logging.info(f"No directory {directory} specified for transcription.")
         return
 
+    logging.info(f"Transcribing files in {directory}.")
     for extension in extensions:
-        file_path = os.path.join(directory, f"**/*.{extension}")
-        files = glob(file_path)
+        file_path = os.path.join(directory, f"**\\*.{extension}")
+        files = glob(file_path, recursive=True)
+        # print(f"files = {files}")
+        logging.info(f"Looking for files with {extension} in {file_path}")
         for file in files:
-            transcribe_file(file, language, delete_files, task)
+            transcribe_file(file, language, delete_files, task, model)
             logging.info(f"Move to next file from func transcribe_directory. File was {file}")
 
     # transcribe_language_subfolders(directory, extensions, delete_files, task)
@@ -186,7 +186,7 @@ def parse_arguments():
                         help="Delete files after transcribing (Y/N)")
     parser.add_argument("-l", "--language", default="Russian", help="Language for transcribing files")
     parser.add_argument("-t", "--task", default="transcribe", help="Task for whisper files")
-
+    parser.add_argument("-m", "--model", default="large-v3", help="Model of whisper")
 
     parser.add_argument("-bm", "--bk_mask", default="", help="Directory for files that works after primary directory")
     parser.add_argument("-bl", "--bk_language", default="Russian", help="Language for unprimary files")
@@ -194,11 +194,10 @@ def parse_arguments():
                         help="Delete background files after transcribing?")
     parser.add_argument("-bt", "--bk_task", default="transcribe", help="Task for not primary folder whisper files")
 
-
     return parser.parse_args()
 
 
-def left_function(pth, extensions, language, delete, task):
+def left_function(pth, extensions, language, delete, task, model):
     if pth[-1] == '"':
         pth = pth[:-1]  # some bug of path with spaces
     for extension in extensions:
@@ -208,7 +207,7 @@ def left_function(pth, extensions, language, delete, task):
             srt_file = os.path.join(os.path.splitext(file)[0] + '.srt')
             file_lock = f"{srt_file}.dummy"
             if not os.path.exists(srt_file) and not os.path.exists(file_lock):
-                transcribe_file(file, language, delete, task)
+                transcribe_file(file, language, delete, task, model)
                 return
 
 
@@ -220,11 +219,11 @@ def main():
     args.extensions = args.extensions.split(',')
 
     while True:
-        logging.info("Starting func transcribe_directory.")
-        transcribe_directory(args.dir_path, args.extensions, args.language, args.delete_files, args.task)
+        logging.info(f"Starting func transcribe_directory for {args.dir_path}.")
+        transcribe_directory(args.dir_path, args.extensions, args.language, args.delete_files, args.task, args.model)
         if args.bk_mask:
             logging.info("Starting func left_function.")
-            left_function(args.bk_mask, args.extensions, args.bk_language, args.bk_delete, args.bk_task)
+            left_function(args.bk_mask, args.extensions, args.bk_language, args.bk_delete, args.bk_task, args.model)
         time.sleep(10)
 
 
